@@ -67,7 +67,7 @@ class StringValidator extends Validator
 
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function init()
     {
@@ -99,7 +99,7 @@ class StringValidator extends Validator
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function validateAttribute($model, $attribute)
     {
@@ -125,7 +125,7 @@ class StringValidator extends Validator
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     protected function validateValue($value)
     {
@@ -146,57 +146,5 @@ class StringValidator extends Validator
         }
 
         return null;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function clientValidateAttribute($model, $attribute, $view)
-    {
-        ValidationAsset::register($view);
-        $options = $this->getClientOptions($model, $attribute);
-
-        return 'yii.validation.string(value, messages, ' . json_encode($options, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . ');';
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function getClientOptions($model, $attribute)
-    {
-        $label = $model->getAttributeLabel($attribute);
-
-        $options = [
-            'message' => $this->formatMessage($this->message, [
-                'attribute' => $label,
-            ]),
-        ];
-
-        if ($this->min !== null) {
-            $options['min'] = $this->min;
-            $options['tooShort'] = $this->formatMessage($this->tooShort, [
-                'attribute' => $label,
-                'min' => $this->min,
-            ]);
-        }
-        if ($this->max !== null) {
-            $options['max'] = $this->max;
-            $options['tooLong'] = $this->formatMessage($this->tooLong, [
-                'attribute' => $label,
-                'max' => $this->max,
-            ]);
-        }
-        if ($this->length !== null) {
-            $options['is'] = $this->length;
-            $options['notEqual'] = $this->formatMessage($this->notEqual, [
-                'attribute' => $label,
-                'length' => $this->length,
-            ]);
-        }
-        if ($this->skipOnEmpty) {
-            $options['skipOnEmpty'] = 1;
-        }
-
-        return $options;
     }
 }

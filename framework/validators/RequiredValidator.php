@@ -51,7 +51,7 @@ class RequiredValidator extends Validator
 
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function init()
     {
@@ -63,7 +63,7 @@ class RequiredValidator extends Validator
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     protected function validateValue($value)
     {
@@ -81,41 +81,5 @@ class RequiredValidator extends Validator
         return [$this->message, [
             'requiredValue' => $this->requiredValue,
         ]];
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function clientValidateAttribute($model, $attribute, $view)
-    {
-        ValidationAsset::register($view);
-        $options = $this->getClientOptions($model, $attribute);
-
-        return 'yii.validation.required(value, messages, ' . json_encode($options, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . ');';
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function getClientOptions($model, $attribute)
-    {
-        $options = [];
-        if ($this->requiredValue !== null) {
-            $options['message'] = $this->formatMessage($this->message, [
-                'requiredValue' => $this->requiredValue,
-            ]);
-            $options['requiredValue'] = $this->requiredValue;
-        } else {
-            $options['message'] = $this->message;
-        }
-        if ($this->strict) {
-            $options['strict'] = 1;
-        }
-
-        $options['message'] = $this->formatMessage($options['message'], [
-            'attribute' => $model->getAttributeLabel($attribute),
-        ]);
-
-        return $options;
     }
 }

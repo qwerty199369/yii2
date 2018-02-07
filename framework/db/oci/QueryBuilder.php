@@ -11,6 +11,7 @@ use yii\base\InvalidArgumentException;
 use yii\db\Connection;
 use yii\db\Exception;
 use yii\db\Expression;
+use yii\helpers\StringHelper;
 
 /**
  * QueryBuilder is the query builder for Oracle databases.
@@ -47,13 +48,13 @@ class QueryBuilder extends \yii\db\QueryBuilder
     ];
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     protected $likeEscapeCharacter = '!';
     /**
      * `\` is initialized in [[buildLikeCondition()]] method since
      * we need to choose replacement value based on [[\yii\db\Schema::quoteValue()]].
-     * @inheritdoc
+     * {@inheritdoc}
      */
     protected $likeEscapingReplacements = [
         '%' => '!%',
@@ -63,7 +64,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
 
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function buildOrderByAndLimit($sql, $orderBy, $limit, $offset, &$params)
     {
@@ -135,7 +136,7 @@ EOD;
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function resetSequence($table, $value = null)
     {
@@ -161,7 +162,7 @@ EOD;
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function addForeignKey($name, $table, $columns, $refTable, $refColumns, $delete = null, $update = null)
     {
@@ -181,7 +182,7 @@ EOD;
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function insert($table, $columns, &$params)
     {
@@ -271,7 +272,7 @@ EOD;
                     $value = $schema->quoteValue($value);
                 } elseif (is_float($value)) {
                     // ensure type cast always has . as decimal separator in all locales
-                    $value = str_replace(',', '.', (string) $value);
+                    $value = StringHelper::floatToString($value);
                 } elseif ($value === false) {
                     $value = 0;
                 } elseif ($value === null) {
@@ -296,7 +297,7 @@ EOD;
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      * @since 2.0.8
      */
     public function selectExists($rawSql)
@@ -305,7 +306,7 @@ EOD;
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      * @since 2.0.8
      */
     public function dropCommentFromColumn($table, $column)
@@ -314,7 +315,7 @@ EOD;
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      * @since 2.0.8
      */
     public function dropCommentFromTable($table)
@@ -339,7 +340,7 @@ EOD;
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function buildInCondition($operator, $operands, &$params)
     {
@@ -368,7 +369,7 @@ EOD;
             throw new Exception("Operator '$operator' requires two operands.");
         }
 
-        list($column, $values) = $operands;
+        [$column, $values] = $operands;
 
         if ($values instanceof \Traversable) {
             $values = iterator_to_array($values);

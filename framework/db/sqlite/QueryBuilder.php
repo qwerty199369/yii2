@@ -10,9 +10,8 @@ namespace yii\db\sqlite;
 use yii\base\InvalidArgumentException;
 use yii\base\NotSupportedException;
 use yii\db\Connection;
-use yii\db\Exception;
-use yii\db\Expression;
 use yii\db\Query;
+use yii\helpers\StringHelper;
 
 /**
  * QueryBuilder is the query builder for SQLite databases.
@@ -49,7 +48,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
     ];
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     protected $likeEscapeCharacter = '\\';
 
@@ -105,7 +104,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
                     $value = $schema->quoteValue($value);
                 } elseif (is_float($value)) {
                     // ensure type cast always has . as decimal separator in all locales
-                    $value = str_replace(',', '.', (string) $value);
+                    $value = StringHelper::floatToString($value);
                 } elseif ($value === false) {
                     $value = 0;
                 } elseif ($value === null) {
@@ -359,7 +358,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      * @throws NotSupportedException
      * @since 2.0.8
      */
@@ -369,7 +368,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      * @throws NotSupportedException
      * @since 2.0.8
      */
@@ -379,7 +378,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      * @throws NotSupportedException
      * @since 2.0.8
      */
@@ -389,7 +388,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      * @throws NotSupportedException
      * @since 2.0.8
      */
@@ -399,7 +398,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function buildLimit($limit, $offset)
     {
@@ -419,7 +418,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      * @throws NotSupportedException if `$columns` is an array
      */
     protected function buildSubqueryInCondition($operator, $columns, $values, &$params)
@@ -465,7 +464,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function build($query, $params = [])
     {
@@ -494,7 +493,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function buildUnion($unions, &$params)
     {

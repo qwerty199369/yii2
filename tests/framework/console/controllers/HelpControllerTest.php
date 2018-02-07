@@ -19,7 +19,7 @@ use yiiunit\TestCase;
 class HelpControllerTest extends TestCase
 {
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function setUp()
     {
@@ -51,6 +51,31 @@ class HelpControllerTest extends TestCase
         $action = $controller->createAction($actionID);
         $action->runWithParams($actionParams);
         return $controller->flushStdOutBuffer();
+    }
+
+    public function testModuleControllersList()
+    {
+        $this->mockApplication([
+            'enableCoreCommands' => false,
+            'modules' => [
+                'magic' => 'yiiunit\data\modules\magic\Module',
+            ],
+        ]);
+        $result = Console::stripAnsiFormat($this->runControllerAction('list'));
+        $this->assertEqualsWithoutLE(<<<'STRING'
+help
+help/index
+help/list
+help/list-action-options
+help/usage
+magic/e-tag
+magic/e-tag/delete
+magic/e-tag/list-e-tags
+magic/subFolder/sub
+magic/subFolder/sub/test
+
+STRING
+            , $result);
     }
 
     public function testActionList()

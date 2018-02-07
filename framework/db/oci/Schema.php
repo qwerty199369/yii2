@@ -44,7 +44,7 @@ class Schema extends \yii\db\Schema
 
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function init()
     {
@@ -74,17 +74,17 @@ class Schema extends \yii\db\Schema
 
     /**
      * @inheritDoc
+     * @see https://docs.oracle.com/cd/B28359_01/server.111/b28337/tdpsg_user_accounts.htm
      */
     protected function findSchemaNames()
     {
-        $sql = <<<'SQL'
-SELECT
-    USERNAME
-FROM DBA_USERS U
-WHERE
-    EXISTS (SELECT 1 FROM DBA_OBJECTS O WHERE O.OWNER = U.USERNAME)
-    AND DEFAULT_TABLESPACE NOT IN ('SYSTEM','SYSAUX')
+        static $sql = <<<'SQL'
+SELECT "u"."USERNAME"
+FROM "DBA_USERS" "u"
+WHERE "u"."DEFAULT_TABLESPACE" NOT IN ('SYSTEM', 'SYSAUX')
+ORDER BY "u"."USERNAME" ASC
 SQL;
+
         return $this->db->createCommand($sql)->queryColumn();
     }
 
@@ -232,7 +232,7 @@ SQL;
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function releaseSavepoint($name)
     {
@@ -240,7 +240,7 @@ SQL;
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function quoteSimpleTableName($name)
     {
@@ -248,7 +248,7 @@ SQL;
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function createQueryBuilder()
     {
@@ -256,7 +256,7 @@ SQL;
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function createColumnSchemaBuilder($type, $length = null)
     {
@@ -483,8 +483,7 @@ SQL;
         }
 
         foreach ($constraints as $constraint) {
-            $name = array_keys($constraint);
-            $name = current($name);
+            $name = current(array_keys($constraint));
 
             $table->foreignKeys[$name] = array_merge([$constraint['tableName']], $constraint['columns']);
         }
@@ -586,7 +585,7 @@ SQL;
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function insert($table, $columns)
     {

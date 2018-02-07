@@ -11,6 +11,7 @@ use yii\base\Behavior;
 use yii\base\InvalidArgumentException;
 use yii\base\Model;
 use yii\db\BaseActiveRecord;
+use yii\helpers\StringHelper;
 use yii\validators\BooleanValidator;
 use yii\validators\NumberValidator;
 use yii\validators\StringValidator;
@@ -187,7 +188,7 @@ class AttributeTypecastBehavior extends Behavior
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function attach($owner)
     {
@@ -253,6 +254,9 @@ class AttributeTypecastBehavior extends Behavior
                 case self::TYPE_BOOLEAN:
                     return (bool) $value;
                 case self::TYPE_STRING:
+                    if (is_float($value)) {
+                        return StringHelper::floatToString($value);
+                    }
                     return (string) $value;
                 default:
                     throw new InvalidArgumentException("Unsupported type '{$type}'");
@@ -281,7 +285,7 @@ class AttributeTypecastBehavior extends Behavior
 
             if ($type !== null) {
                 foreach ((array) $validator->attributes as $attribute) {
-                    $attributeTypes[$attribute] = $type;
+                    $attributeTypes[ltrim($attribute, '!')] = $type;
                 }
             }
         }
@@ -290,7 +294,7 @@ class AttributeTypecastBehavior extends Behavior
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function events()
     {

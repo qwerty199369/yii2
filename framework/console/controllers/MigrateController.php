@@ -74,11 +74,17 @@ use yii\helpers\Console;
 class MigrateController extends BaseMigrateController
 {
     /**
+     * Maximum length of a migration name.
+     * @since 2.0.13
+     */
+    const MAX_NAME_LENGTH = 180;
+
+    /**
      * @var string the name of the table for keeping applied migration information.
      */
     public $migrationTable = '{{%migration}}';
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public $templateFile = '@yii/views/migration.php';
     /**
@@ -126,10 +132,15 @@ class MigrateController extends BaseMigrateController
      * for creating the object.
      */
     public $db = 'db';
+    /**
+     * @var string the comment for the table being created.
+     * @since 2.0.14
+     */
+    public $comment = '';
 
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function options($actionID)
     {
@@ -137,18 +148,19 @@ class MigrateController extends BaseMigrateController
             parent::options($actionID),
             ['migrationTable', 'db'], // global for all actions
             $actionID === 'create'
-                ? ['templateFile', 'fields', 'useTablePrefix']
+                ? ['templateFile', 'fields', 'useTablePrefix', 'comment']
                 : []
         );
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      * @since 2.0.8
      */
     public function optionAliases()
     {
         return array_merge(parent::optionAliases(), [
+            'c' => 'comment',
             'f' => 'fields',
             'p' => 'migrationPath',
             't' => 'migrationTable',
@@ -167,10 +179,7 @@ class MigrateController extends BaseMigrateController
     public function beforeAction($action)
     {
         if (parent::beforeAction($action)) {
-            if ($action->id !== 'create') {
-                $this->db = Instance::ensure($this->db, Connection::class);
-            }
-
+            $this->db = Instance::ensure($this->db, Connection::class);
             return true;
         }
 
@@ -185,11 +194,16 @@ class MigrateController extends BaseMigrateController
     protected function createMigration($class)
     {
         $this->includeMigrationFile($class);
-        return new $class(['db' => $this->db, 'compact' => $this->compact]);
+
+        return Yii::createObject([
+            'class' => $class,
+            'db' => $this->db,
+            'compact' => $this->compact,
+        ]);
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     protected function getMigrationHistory($limit)
     {
@@ -253,7 +267,7 @@ class MigrateController extends BaseMigrateController
         $tableName = $this->db->schema->getRawTableName($this->migrationTable);
         $this->stdout("Creating migration history table \"$tableName\"...", Console::FG_YELLOW);
         $this->db->createCommand()->createTable($this->migrationTable, [
-            'version' => 'varchar(180) NOT NULL PRIMARY KEY',
+            'version' => 'varchar(' . static::MAX_NAME_LENGTH . ') NOT NULL PRIMARY KEY',
             'apply_time' => 'integer',
         ])->execute();
         $this->db->createCommand()->insert($this->migrationTable, [
@@ -264,7 +278,7 @@ class MigrateController extends BaseMigrateController
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     protected function addMigrationHistory($version)
     {
@@ -276,7 +290,7 @@ class MigrateController extends BaseMigrateController
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      * @since 2.0.13
      */
     protected function truncateDatabase()
@@ -302,7 +316,7 @@ class MigrateController extends BaseMigrateController
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     protected function removeMigrationHistory($version)
     {
@@ -312,8 +326,27 @@ class MigrateController extends BaseMigrateController
         ])->execute();
     }
 
+    private $_migrationNameLimit;
+
     /**
-     * @inheritdoc
+     * {@inheritdoc}
+     * @since 2.0.13
+     */
+    protected function getMigrationNameLimit()
+    {
+        if ($this->_migrationNameLimit !== null) {
+            return $this->_migrationNameLimit;
+        }
+        $tableSchema = $this->db->schema ? $this->db->schema->getTableSchema($this->migrationTable, true) : null;
+        if ($tableSchema !== null) {
+            return $this->_migrationNameLimit = $tableSchema->columns['version']->size;
+        }
+
+        return static::MAX_NAME_LENGTH;
+    }
+
+    /**
+     * {@inheritdoc}
      * @since 2.0.8
      */
     protected function generateMigrationSourceCode($params)
@@ -410,6 +443,7 @@ class MigrateController extends BaseMigrateController
             'table' => $this->generateTableName($table),
             'fields' => $fields,
             'foreignKeys' => $foreignKeys,
+            'tableComment' => $this->comment,
         ]));
     }
 

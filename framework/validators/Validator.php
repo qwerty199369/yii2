@@ -228,7 +228,7 @@ class Validator extends Component
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function init()
     {
@@ -317,7 +317,21 @@ class Validator extends Component
      * Validates a value.
      * A validator class can implement this method to support data validation out of the context of a data model.
      * @param mixed $value the data value to be validated.
-     * @return array|null the error message and the parameters to be inserted into the error message.
+     * @return array|null the error message and the array of parameters to be inserted into the error message.
+     * ```php
+     * if (!$valid) {
+     *     return [$this->message, [
+     *         'param1' => $this->param1,
+     *         'formattedLimit' => Yii::$app->formatter->asShortSize($this->getSizeLimit()),
+     *         'mimeTypes' => implode(', ', $this->mimeTypes),
+     *         'param4' => 'etc...',
+     *     ]];
+     * }
+     *
+     * return null;
+     * ```
+     * for this example `message` template can contain `{param1}`, `{formattedLimit}`, `{mimeTypes}`, `{param4}`
+     *
      * Null should be returned if the data is valid.
      * @throws NotSupportedException if the validator does not supporting data validation without a model
      */
@@ -328,8 +342,6 @@ class Validator extends Component
 
     /**
      * Returns the JavaScript needed for performing client-side validation.
-     *
-     * Calls [[getClientOptions()]] to generate options array for client-side validation.
      *
      * You may override this method to return the JavaScript validation code if
      * the validator can support client-side validation.
@@ -362,20 +374,6 @@ class Validator extends Component
     public function clientValidateAttribute($model, $attribute, $view)
     {
         return null;
-    }
-
-    /**
-     * Returns the client-side validation options.
-     * This method is usually called from [[clientValidateAttribute()]]. You may override this method to modify options
-     * that will be passed to the client-side validation.
-     * @param \yii\base\Model $model the model being validated
-     * @param string $attribute the attribute name being validated
-     * @return array the client-side validation options
-     * @since 2.0.11
-     */
-    public function getClientOptions($model, $attribute)
-    {
-        return [];
     }
 
     /**
@@ -435,13 +433,13 @@ class Validator extends Component
     }
 
     /**
-     * Formats a mesage using the I18N, or simple strtr if `\Yii::$app` is not available.
+     * Formats a message using the I18N, or simple strtr if `\Yii::$app` is not available.
      * @param string $message
      * @param array $params
      * @since 2.0.12
      * @return string
      */
-    protected function formatMessage($message, $params)
+    public function formatMessage($message, $params)
     {
         if (Yii::$app !== null) {
             return \Yii::$app->getI18n()->format($message, $params, Yii::$app->language);

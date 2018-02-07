@@ -10,6 +10,7 @@ namespace yii\db;
 use yii\base\InvalidArgumentException;
 use yii\base\NotSupportedException;
 use yii\helpers\ArrayHelper;
+use yii\helpers\StringHelper;
 
 /**
  * QueryBuilder builds a SELECT SQL statement based on the specification given as a [[Query]] object.
@@ -163,7 +164,7 @@ class QueryBuilder extends \yii\base\BaseObject
         $placeholders = [];
         $values = ' DEFAULT VALUES';
         if ($columns instanceof \yii\db\Query) {
-            [$names, $values, $params] = $this->prepareInsertSelectSubQuery($columns, $schema);
+            [$names, $values, $params] = $this->prepareInsertSelectSubQuery($columns, $schema, $params);
         } else {
             foreach ($columns as $name => $value) {
                 $names[] = $schema->quoteColumnName($name);
@@ -267,7 +268,7 @@ class QueryBuilder extends \yii\base\BaseObject
                     $value = $schema->quoteValue($value);
                 } elseif (is_float($value)) {
                     // ensure type cast always has . as decimal separator in all locales
-                    $value = str_replace(',', '.', (string) $value);
+                    $value = StringHelper::floatToString($value);
                 } elseif ($value === false) {
                     $value = 0;
                 } elseif ($value === null) {
@@ -784,6 +785,43 @@ class QueryBuilder extends \yii\base\BaseObject
     public function dropCommentFromTable($table)
     {
         return 'COMMENT ON TABLE ' . $this->db->quoteTableName($table) . ' IS NULL';
+    }
+
+    /**
+     * Creates a SQL View.
+     *
+     * @param string $viewName the name of the view to be created.
+     * @param string|Query $subQuery the select statement which defines the view.
+     * This can be either a string or a [[Query]] object.
+     * @return string the `CREATE VIEW` SQL statement.
+     * @since 2.0.14
+     */
+    public function createView($viewName, $subQuery)
+    {
+        if ($subQuery instanceof Query) {
+            [$rawQuery, $params] = $this->build($subQuery);
+            array_walk(
+                $params,
+                function(&$param) {
+                    $param = $this->db->quoteValue($param);
+                }
+            );
+            $subQuery = strtr($rawQuery, $params);
+        }
+
+        return 'CREATE VIEW ' . $this->db->quoteTableName($viewName) . ' AS ' . $subQuery;
+    }
+
+    /**
+     * Drops a SQL View.
+     *
+     * @param string $viewName the name of the view to be dropped.
+     * @return string the `DROP VIEW` SQL statement.
+     * @since 2.0.14
+     */
+    public function dropView($viewName)
+    {
+        return 'DROP VIEW ' . $this->db->quoteTableName($viewName);
     }
 
     /**

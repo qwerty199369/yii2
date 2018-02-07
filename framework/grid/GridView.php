@@ -12,8 +12,6 @@ use Yii;
 use yii\base\InvalidConfigException;
 use yii\base\Model;
 use yii\helpers\Html;
-use yii\helpers\Json;
-use yii\helpers\Url;
 use yii\i18n\Formatter;
 use yii\widgets\BaseListView;
 
@@ -127,6 +125,11 @@ class GridView extends BaseListView
      * @var bool whether to show the footer section of the grid table.
      */
     public $showFooter = false;
+	/**
+	 * @var bool whether to place footer after body in DOM if $showFooter is true
+     * @since 2.0.14
+	 */
+	public $placeFooterAfterBody = false;
     /**
      * @var bool whether to show the grid view if [[dataProvider]] returns no data.
      */
@@ -216,10 +219,6 @@ class GridView extends BaseListView
      */
     public $filterUrl;
     /**
-     * @var string additional jQuery selector for selecting filter input fields
-     */
-    public $filterSelector;
-    /**
      * @var string whether the filters should be displayed in the grid view. Valid values include:
      *
      * - [[FILTER_POS_HEADER]]: the filters will be displayed on top of each column's header cell.
@@ -279,20 +278,6 @@ class GridView extends BaseListView
     }
 
     /**
-     * Runs the widget.
-     */
-    public function run()
-    {
-        $id = $this->options['id'];
-        $options = Json::htmlEncode($this->getClientOptions());
-        $view = $this->getView();
-        GridViewAsset::register($view);
-        $view->registerJs("jQuery('#$id').yiiGridView($options);");
-
-        return parent::run();
-    }
-
-    /**
      * Renders validator errors of filter model.
      * @return string the rendering result.
      */
@@ -306,7 +291,7 @@ class GridView extends BaseListView
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function renderSection($name)
     {
@@ -319,25 +304,6 @@ class GridView extends BaseListView
     }
 
     /**
-     * Returns the options for the grid view JS widget.
-     * @return array the options
-     */
-    protected function getClientOptions()
-    {
-        $filterUrl = isset($this->filterUrl) ? $this->filterUrl : Yii::$app->request->url;
-        $id = $this->filterRowOptions['id'];
-        $filterSelector = "#$id input, #$id select";
-        if (isset($this->filterSelector)) {
-            $filterSelector .= ', ' . $this->filterSelector;
-        }
-
-        return [
-            'filterUrl' => Url::to($filterUrl),
-            'filterSelector' => $filterSelector,
-        ];
-    }
-
-    /**
      * Renders the data models for the grid view.
      */
     public function renderItems()
@@ -346,13 +312,25 @@ class GridView extends BaseListView
         $columnGroup = $this->renderColumnGroup();
         $tableHeader = $this->showHeader ? $this->renderTableHeader() : false;
         $tableBody = $this->renderTableBody();
-        $tableFooter = $this->showFooter ? $this->renderTableFooter() : false;
+
+        $tableFooter = false;
+        $tableFooterAfterBody = false;
+        
+        if ($this->showFooter) {
+            if ($this->placeFooterAfterBody) {
+                $tableFooterAfterBody = $this->renderTableFooter();
+            } else {
+                $tableFooter = $this->renderTableFooter();
+            }	        
+        }
+
         $content = array_filter([
             $caption,
             $columnGroup,
             $tableHeader,
             $tableFooter,
             $tableBody,
+            $tableFooterAfterBody,
         ]);
 
         return Html::tag('table', implode("\n", $content), $this->tableOptions);
@@ -377,21 +355,16 @@ class GridView extends BaseListView
      */
     public function renderColumnGroup()
     {
-        $requireColumnGroup = false;
         foreach ($this->columns as $column) {
             /* @var $column Column */
             if (!empty($column->options)) {
-                $requireColumnGroup = true;
-                break;
-            }
-        }
-        if ($requireColumnGroup) {
-            $cols = [];
-            foreach ($this->columns as $column) {
-                $cols[] = Html::tag('col', '', $column->options);
-            }
+                $cols = [];
+                foreach ($this->columns as $col) {
+                    $cols[] = Html::tag('col', '', $col->options);
+                }
 
-            return Html::tag('colgroup', implode("\n", $cols));
+                return Html::tag('colgroup', implode("\n", $cols));
+            }
         }
 
         return false;

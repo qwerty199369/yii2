@@ -8,9 +8,7 @@
 namespace yii\validators;
 
 use Yii;
-use yii\helpers\Json;
 use yii\helpers\StringHelper;
-use yii\web\JsExpression;
 
 /**
  * NumberValidator validates that the attribute value is a number.
@@ -58,7 +56,7 @@ class NumberValidator extends Validator
 
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function init()
     {
@@ -76,12 +74,12 @@ class NumberValidator extends Validator
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function validateAttribute($model, $attribute)
     {
         $value = $model->$attribute;
-        if (is_array($value) || (is_object($value) && !method_exists($value, '__toString'))) {
+        if ($this->isNotNumber($value)) {
             $this->addError($model, $attribute, $this->message);
             return;
         }
@@ -99,11 +97,11 @@ class NumberValidator extends Validator
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     protected function validateValue($value)
     {
-        if (is_array($value) || is_object($value)) {
+        if ($this->isNotNumber($value)) {
             return [Yii::t('yii', '{attribute} is invalid.'), []];
         }
         $pattern = $this->integerOnly ? $this->integerPattern : $this->numberPattern;
@@ -118,53 +116,13 @@ class NumberValidator extends Validator
         return null;
     }
 
-    /**
-     * @inheritdoc
+    /*
+     * @param mixed $value the data value to be checked.
      */
-    public function clientValidateAttribute($model, $attribute, $view)
+    private function isNotNumber($value)
     {
-        ValidationAsset::register($view);
-        $options = $this->getClientOptions($model, $attribute);
-
-        return 'yii.validation.number(value, messages, ' . Json::htmlEncode($options) . ');';
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function getClientOptions($model, $attribute)
-    {
-        $label = $model->getAttributeLabel($attribute);
-
-        $options = [
-            'pattern' => new JsExpression($this->integerOnly ? $this->integerPattern : $this->numberPattern),
-            'message' => $this->formatMessage($this->message, [
-                'attribute' => $label,
-            ]),
-        ];
-
-        if ($this->min !== null) {
-            // ensure numeric value to make javascript comparison equal to PHP comparison
-            // https://github.com/yiisoft/yii2/issues/3118
-            $options['min'] = is_string($this->min) ? (float) $this->min : $this->min;
-            $options['tooSmall'] = $this->formatMessage($this->tooSmall, [
-                'attribute' => $label,
-                'min' => $this->min,
-            ]);
-        }
-        if ($this->max !== null) {
-            // ensure numeric value to make javascript comparison equal to PHP comparison
-            // https://github.com/yiisoft/yii2/issues/3118
-            $options['max'] = is_string($this->max) ? (float) $this->max : $this->max;
-            $options['tooBig'] = $this->formatMessage($this->tooBig, [
-                'attribute' => $label,
-                'max' => $this->max,
-            ]);
-        }
-        if ($this->skipOnEmpty) {
-            $options['skipOnEmpty'] = 1;
-        }
-
-        return $options;
+        return is_array($value)
+        || (is_object($value) && !method_exists($value, '__toString'))
+        || (!is_object($value) && !is_scalar($value) && !is_null($value));
     }
 }

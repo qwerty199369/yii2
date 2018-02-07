@@ -133,7 +133,8 @@ class NumberValidatorTest extends TestCase
     {
         $val = new NumberValidator(['min' => 1]);
         $this->assertTrue($val->validate(1));
-        $this->assertFalse($val->validate(-1));
+        $this->assertFalse($val->validate(-1, $error));
+        $this->assertContains('the input value must be no less than 1.', $error);
         $this->assertFalse($val->validate('22e-12'));
         $this->assertTrue($val->validate(PHP_INT_MAX + 1));
         $val = new NumberValidator(['min' => 1], ['integerOnly' => true]);
@@ -249,52 +250,51 @@ class NumberValidatorTest extends TestCase
         $this->assertSame('attr_number is to small.', $msgs[0]);
     }
 
-    /**
-     * @see https://github.com/yiisoft/yii2/issues/3118
-     */
-    public function testClientValidateComparison()
-    {
-        $val = new NumberValidator([
-            'min' => 5,
-            'max' => 10,
-        ]);
-        $model = new FakedValidationModel();
-        $js = $val->clientValidateAttribute($model, 'attr_number', new View(['assetBundles' => ['yii\validators\ValidationAsset' => true]]));
-        $this->assertContains('"min":5', $js);
-        $this->assertContains('"max":10', $js);
-
-        $val = new NumberValidator([
-            'min' => '5',
-            'max' => '10',
-        ]);
-        $model = new FakedValidationModel();
-        $js = $val->clientValidateAttribute($model, 'attr_number', new View(['assetBundles' => ['yii\validators\ValidationAsset' => true]]));
-        $this->assertContains('"min":5', $js);
-        $this->assertContains('"max":10', $js);
-
-        $val = new NumberValidator([
-            'min' => 5.65,
-            'max' => 13.37,
-        ]);
-        $model = new FakedValidationModel();
-        $js = $val->clientValidateAttribute($model, 'attr_number', new View(['assetBundles' => ['yii\validators\ValidationAsset' => true]]));
-        $this->assertContains('"min":5.65', $js);
-        $this->assertContains('"max":13.37', $js);
-
-        $val = new NumberValidator([
-            'min' => '5.65',
-            'max' => '13.37',
-        ]);
-        $model = new FakedValidationModel();
-        $js = $val->clientValidateAttribute($model, 'attr_number', new View(['assetBundles' => ['yii\validators\ValidationAsset' => true]]));
-        $this->assertContains('"min":5.65', $js);
-        $this->assertContains('"max":13.37', $js);
-    }
-
     public function testValidateObject()
     {
         $val = new NumberValidator();
         $value = new \stdClass();
         $this->assertFalse($val->validate($value));
+    }
+
+    public function testValidateResource()
+    {
+        $val = new NumberValidator();
+        $fp = fopen('php://stdin', 'r');
+        $this->assertFalse($val->validate($fp));
+
+        $model = new FakedValidationModel();
+        $model->attr_number = $fp;
+        $val->validateAttribute($model, 'attr_number');
+        $this->assertTrue($model->hasErrors('attr_number'));
+
+        fclose($fp);
+    }
+
+    public function testValidateToString()
+    {
+        $val = new NumberValidator();
+        $object = new TestClass('10');
+        $this->assertTrue($val->validate($object));
+
+        $model = new FakedValidationModel();
+        $model->attr_number = $object;
+        $val->validateAttribute($model, 'attr_number');
+        $this->assertFalse($model->hasErrors('attr_number'));
+    }
+}
+
+class TestClass
+{
+    public $foo;
+
+    public function __construct($foo)
+    {
+        $this->foo = $foo;
+    }
+
+    public function __toString()
+    {
+        return $this->foo;
     }
 }

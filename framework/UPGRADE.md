@@ -22,7 +22,7 @@ Before upgrading, make sure you have a global installation of the latest version
 as well as a stable version of Composer:
 
     composer self-update
-    composer global require "fxp/composer-asset-plugin:^1.3.1" --no-plugins
+    composer global require "fxp/composer-asset-plugin:^1.4.1" --no-plugins
 
 The simple way to upgrade Yii, for example to version 2.0.10 (replace this with the version you want) will be running `composer require`:
 
@@ -55,7 +55,7 @@ Upgrade from Yii 2.0.x
 
 * PHP requirements were raised to 7.1. Make sure your code is updated accordingly.
 * memcache PECL extension support was dropped. Use memcached PECL extension instead.
-* Following new methods have been added to `yii\i18n\MessageInterface` `addHeader()`, `setHeader()`, `getHeader()`, `setHeaders()`
+* Following new methods have been added to `yii\mail\MessageInterface` `addHeader()`, `setHeader()`, `getHeader()`, `setHeaders()`
   providing ability to setup custom mail headers. Make sure your provide implementation for those methods, while
   creating your own mailer solution.
 * `::className()` method calls should be replaced with [native](http://php.net/manual/en/language.oop5.basic.php#language.oop5.basic.class.class) `::class`.
@@ -82,11 +82,12 @@ Upgrade from Yii 2.0.x
 * Profiling related functionality has been extracted into a separated component under `yii\profile\ProfilerInterface`.
   Profiling messages should be collection using `yii\base\Application::$profiler`. In case you wish to
   continue storing profiling messages along with the log ones, you may use `yii\profile\LogTarget` profiling target.
-* Classes `yii\web\Request` and `yii\web\Response` have been updated to match interfaces `Psr\Http\Message\RequestInterface`
+* Classes `yii\web\Request` and `yii\web\Response` have been updated to match interfaces `Psr\Http\Message\ServerRequestInterface`
   and `Psr\Http\Message\ResponseInterface` accordingly. Make sure you use their methods and properties correctly.
   In particular: method `getHeaders()` and corresponding virtual property `$headers` are no longer return `HeaderCollection`
   instance, you can use `getHeaderCollection()` in order to use old headers setup syntax; `Request|Response::$version` renamed
   to `Request|Response::$protocolVersion`; `Response::$statusText` renamed `Response::$reasonPhrase`;
+  `Request::$bodyParams` renamed to `Request::$parsedBody`; `Request::getBodyParam()` renamed to `Request::getParsedBodyParam()`;
 * `yii\web\Response::$stream` is no longer available, use `yii\web\Response::withBody()` to setup stream response.
   You can use `Response::$bodyRange` to setup stream content range.
 * Classes `yii\web\CookieCollection`, `yii\web\HeaderCollection` and `yii\web\UploadedFile` have been moved under
@@ -106,6 +107,9 @@ Upgrade from Yii 2.0.x
   be configured there. Creating your own cache implementation you should implement `\Psr\SimpleCache\CacheInterface` or
   extend `yii\caching\SimpleCache` abstract class. Use `yii\caching\CacheInterface` only if you wish to replace `yii\caching\Cache`
   component providing your own solution for cache dependency handling.
+* `yii\caching\SimpleCache::$serializer` now should be `yii\serialize\SerializerInterface` instance or its DI compatible configuration.
+  Thus it does no longer accept pair of serialize/unserialize functions as an array. Use `yii\serialize\CallbackSerializer` or
+  other predefined serializer class from `yii\serialize\*` namespace instead.
 * Console command used to clear cache now calls related actions "clear" instead of "flush".
 * Yii autoloader was removed in favor of Composer-generated one. You should remove explicit inclusion of `Yii.php` from
   your entry `index.php` scripts. In case you have relied on class map, use `composer.json` instead of configuring it
@@ -120,8 +124,8 @@ Upgrade from Yii 2.0.x
 * Result of `yii\web\Request::getBodyParams()` now includes uploaded files (e.g. result of `yii\web\Request::getUploadedFiles()`).
   You should aware that instances of `yii\http\UploadedFile` may appear inside body params.
 * The following method signature have changed. If you override any of them in your code, you have to adjust these places:
-  `yii\db\QueryBuilderBuild::buildGroupBy($columns)` -> `buildGroupBy($columns, &$params)`
-  `yii\db\QueryBuilderbuild::buildOrderByAndLimit($sql, $orderBy, $limit, $offset)` -> `buildOrderByAndLimit($sql, $orderBy, $limit, $offset, &$params)`
+  `yii\db\QueryBuilder::buildGroupBy($columns)` -> `buildGroupBy($columns, &$params)`
+  `yii\db\QueryBuilder::buildOrderByAndLimit($sql, $orderBy, $limit, $offset)` -> `buildOrderByAndLimit($sql, $orderBy, $limit, $offset, &$params)`
   `yii\widgets\ActiveField::hint($content = null, $options = [])`
   `yii\base\View::renderDynamic($statements)` -> `yii\base\View::renderDynamic($statements, array $params = [])`
 * `yii\filters\AccessControl` has been optimized by only instantiating rules at the moment of use.
@@ -133,7 +137,37 @@ Upgrade from Yii 2.0.x
   If you are using `yii\web\Request::resolve()` or `yii\web\UrlManager::parseRequest()` directly, make sure that
   all potential exceptions are handled correctly or set `yii\web\UrlNormalizer::$normalizer` to `false` to disable normalizer.
 * `yii\base\InvalidParamException` was renamed to `yii\base\InvalidArgumentException`.
+* Classes `yii\widgets\ActiveForm`, `yii\widgets\ActiveField`, `yii\grid\GridView`, `yii\web\View` have been refactored
+  to be more generic without including any 'JQuery' support and client-side processing (validation, automatic submit etc.).
+  You should use widget behaviors from `yii\jquery\*` package to make old code function as before. E.g. attach `yii\jquery\ActiveFormClientScript`
+  to `yii\widgets\ActiveForm`, `yii\jquery\GridViewClientScript` to `yii\grid\GridView` and so on.
+* Fields `$enableClientScript` and `$attributes` have been removed from `yii\widgets\ActiveForm`. Make sure
+  you do not use them or specify them during `ActiveForm::begin()` invocation.
+* Field `yii\grid\GridView::$filterSelector` has been removed. Make sure you do not use it or specify it during
+  `GridView::widget()` invocation. Use `yii\jquery\GridViewClientScript::$filterSelector` instead.
+* Method `getClientOptions()` has been removed from `yii\validators\Validator` and all its descendants.
+  All implementations of `clientValidateAttribute()` around built-in validators now return `null`.
+  Use classes from `yii\jquery\validators\client\*` for building client validation (JavaScript) code.
+* Assets `yii\web\JqueryAsset`, `yii\web\YiiAsset`, `yii\validators\ValidationAsset` have been moved under `yii\jquery\*`
+  namespace. Make sure you refer to the new full-qualified names of this classes.
+* Methods `yii\validators\Validator::formatMessage()`, `yii\validators\IpValidator::getIpParsePattern()` and
+  `yii\validators\FileValidator::buildMimeTypeRegexp()` have been made `public`. Make sure you use correct
+  access level specification in case you override these methods.
+* Default script position for the `yii\web\View::registerJs()` changed to `View::POS_END`.
+* Package "ezyang/htmlpurifier" has been made optional and is not installed by default. If you need to use
+  `yii\helpers\HtmlPurifier` or `yii\i18n\Formatter::asHtml()` (e.g. 'html' data format), you'll have to install
+  this package manually for your project.
+* `yii\BaseYii::powered()` method has been removed. Please add "Powered by Yii" link either right into HTML or using
+  `yii\helpers\Html::a()`.
 
+
+Upgrade from Yii 2.0.13
+-----------------------
+
+* Constants `IPV6_ADDRESS_LENGTH`, `IPV4_ADDRESS_LENGTH` were moved from `yii\validators\IpValidator` to `yii\helpers\IpHelper`.
+  If your application relies on these constants, make sure to update your code to follow the changes.
+
+* `yii\base\Security::compareString()` is now throwing `yii\base\InvalidParamException` in case non-strings are compared.
 
 Upgrade from Yii 2.0.12
 -----------------------
@@ -215,6 +249,9 @@ Upgrade from Yii 2.0.12
   However, this change may affect your application if you have code that uses method `yii\base\Module::has()` in order
   to check existence of the component exactly in this specific module. In this case make sure the logic is not corrupted.
 
+* If you are using "asset" command to compress assets and your web applicaiton `assetManager` has `linkAssets` turned on,
+  make sure that "asset" command config has `linkAssets` turned on as well.
+
 
 Upgrade from Yii 2.0.11
 -----------------------
@@ -235,9 +272,10 @@ Upgrade from Yii 2.0.11
   internal cache for `createUrl()` calls. Ensure that all your custom rules implement this method in order to fully 
   benefit from the acceleration provided by this cache.
 
-* `yii\filters\AccessControl` now can be used without `user` component.  
-  In this case `yii\filters\AccessControl::denyAccess()` throws `yii\web\ForbiddenHttpException` and using `AccessRule` 
-  matching a role throws `yii\base\InvalidConfigException`.
+* `yii\filters\AccessControl` now can be used without `user` component. This has two consequences:
+
+  1. If used without user component, `yii\filters\AccessControl::denyAccess()` throws `yii\web\ForbiddenHttpException` instead of redirecting to login page.
+  2. If used without user component, using `AccessRule` matching a role throws `yii\base\InvalidConfigException`.
   
 * Inputmask package name was changed from `jquery.inputmask` to `inputmask`. If you've configured path to
   assets manually, please adjust it. 
@@ -573,7 +611,7 @@ new ones save the following code as `convert.php` that should be placed in the s
       $out = var_export($data, true);
       $out = "<?php\nreturn " . $out . ';';
       $out = str_replace(['array (', ')'], ['[', ']'], $out);
-      file_put_contents($fileName, $out);
+      file_put_contents($fileName, $out, LOCK_EX);
   }
 
   $items = [];

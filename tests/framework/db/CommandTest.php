@@ -12,6 +12,7 @@ use yii\caching\Cache;
 use yii\caching\FileCache;
 use yii\db\Connection;
 use yii\db\DataReader;
+use yii\db\Exception;
 use yii\db\Expression;
 use yii\db\Schema;
 
@@ -58,11 +59,11 @@ abstract class CommandTest extends DatabaseTestCase
         $db = $this->getConnection(false);
 
         $command = $db->createCommand('SELECT * FROM {{customer}}');
-        $this->assertEquals(null, $command->pdoStatement);
+        $this->assertNull($command->pdoStatement);
         $command->prepare();
         $this->assertNotNull($command->pdoStatement);
         $command->cancel();
-        $this->assertEquals(null, $command->pdoStatement);
+        $this->assertNull($command->pdoStatement);
     }
 
     public function testExecute()
@@ -362,6 +363,50 @@ SQL;
             throw $e;
         }
         setlocale(LC_NUMERIC, $locale);
+    }
+
+    public function batchInsertSqlProvider()
+    {
+        return [
+            'issue11242' => [
+                'type',
+                ['int_col', 'float_col', 'char_col'],
+                [['', '', 'Kyiv {{city}}, Ukraine']],
+
+                'expected' => "INSERT INTO `type` (`int_col`, `float_col`, `char_col`) VALUES (NULL, NULL, 'Kyiv {{city}}, Ukraine')",
+                // See https://github.com/yiisoft/yii2/issues/11242
+                // Make sure curly bracelets (`{{..}}`) in values will not be escaped
+            ],
+            'wrongBehavior' => [
+                '{{%type}}',
+                ['{{%type}}.[[int_col]]', '[[float_col]]', 'char_col'],
+                [['', '', 'Kyiv {{city}}, Ukraine']],
+
+                'expected' => "INSERT INTO `type` (`type`.`int_col`, `float_col`, `char_col`) VALUES ('', '', 'Kyiv {{city}}, Ukraine')",
+                /* Test covers potentially wrong behavior and marks it as expected!
+                 * In case table name or table column is passed with curly or square bracelets,
+                 * QueryBuilder can not determine the table schema and typecast values properly.
+                 * TODO: make it work. Impossible without BC breaking for public methods.
+                 */
+            ],
+        ];
+    }
+
+    /**
+     * Make sure that `{{something}}` in values will not be encoded
+     * https://github.com/yiisoft/yii2/issues/11242.
+     *
+     * @dataProvider batchInsertSqlProvider
+     * @param mixed $table
+     * @param mixed $columns
+     * @param mixed $values
+     * @param mixed $expected
+     */
+    public function testBatchInsertSQL($table, $columns, $values, $expected)
+    {
+        $command = $this->getConnection()->createCommand();
+        $command->batchInsert($table, $columns, $values);
+        $this->assertEquals($expected, $command->getSql());
     }
 
     public function testInsert()
@@ -1021,6 +1066,12 @@ SQL;
                 [':active' => false],
                 'SELECT * FROM customer WHERE active = FALSE',
             ],
+            // https://github.com/yiisoft/yii2/issues/15122
+            [
+                'SELECT * FROM customer WHERE id IN (:ids)',
+                [':ids' => new Expression(implode(', ', [1, 2]))],
+                'SELECT * FROM customer WHERE id IN (1, 2)',
+            ],
         ];
     }
 
@@ -1080,5 +1131,86 @@ SQL;
 
         $db->createCommand()->dropTable($tableName)->execute();
         $this->assertNull($db->getSchema()->getTableSchema($tableName));
+    }
+
+    /**
+     * @group iss
+     */
+    public function testTransaction()
+    {
+        $connection = $this->getConnection(false);
+        $this->assertNull($connection->transaction);
+        $command = $connection->createCommand("INSERT INTO {{profile}}([[description]]) VALUES('command transaction')");
+        $this->invokeMethod($command, 'requireTransaction');
+        $command->execute();
+        $this->assertNull($connection->transaction);
+        $this->assertEquals(1, $connection->createCommand("SELECT COUNT(*) FROM {{profile}} WHERE [[description]] = 'command transaction'")->queryScalar());
+    }
+
+    /**
+     * @group iss
+     */
+    public function testRetryHandler()
+    {
+        $connection = $this->getConnection(false);
+        $this->assertNull($connection->transaction);
+        $connection->createCommand("INSERT INTO {{profile}}([[description]]) VALUES('command retry')")->execute();
+        $this->assertNull($connection->transaction);
+        $this->assertEquals(1, $connection->createCommand("SELECT COUNT(*) FROM {{profile}} WHERE [[description]] = 'command retry'")->queryScalar());
+
+        $attempts = null;
+        $hitHandler = false;
+        $hitCatch = false;
+        $command = $connection->createCommand("INSERT INTO {{profile}}([[id]], [[description]]) VALUES(1, 'command retry')");
+        $this->invokeMethod($command, 'setRetryHandler', [function ($exception, $attempt) use (&$attempts, &$hitHandler) {
+            $attempts = $attempt;
+            $hitHandler = true;
+            return $attempt <= 2;
+        }]);
+        try {
+            $command->execute();
+        } catch (Exception $e) {
+            $hitCatch = true;
+            $this->assertInstanceOf('yii\db\IntegrityException', $e);
+        }
+        $this->assertNull($connection->transaction);
+        $this->assertSame(3, $attempts);
+        $this->assertTrue($hitHandler);
+        $this->assertTrue($hitCatch);
+    }
+
+    public function testCreateView()
+    {
+        $db = $this->getConnection();
+        $subquery = (new \yii\db\Query())
+            ->select('bar')
+            ->from('testCreateViewTable')
+            ->where(['>', 'bar', '5']);
+        if ($db->getSchema()->getTableSchema('testCreateViewTable')) {
+            $db->createCommand()->dropTable('testCreateViewTable')->execute();
+        }
+        if ($db->getSchema()->getTableSchema('testCreateView') !== null) {
+            $db->createCommand()->dropView('testCreateView')->execute();
+        }
+        $db->createCommand()->createTable('testCreateViewTable', [
+            'id' => Schema::TYPE_PK,
+            'bar' => Schema::TYPE_INTEGER,
+        ])->execute();
+        $db->createCommand()->insert('testCreateViewTable', ['bar' => 1])->execute();
+        $db->createCommand()->insert('testCreateViewTable', ['bar' => 6])->execute();
+        $db->createCommand()->createView('testCreateView', $subquery)->execute();
+        $records = $db->createCommand('SELECT [[bar]] FROM {{testCreateView}};')->queryAll();
+
+        $this->assertEquals([['bar' => 6]], $records);
+    }
+
+    public function testDropView()
+    {
+        $db = $this->getConnection();
+        $viewName = 'animal_view'; // since it already exists in the fixtures
+        $this->assertNotNull($db->getSchema()->getTableSchema($viewName));
+        $db->createCommand()->dropView($viewName)->execute();
+
+        $this->assertNull($db->getSchema()->getTableSchema($viewName));
     }
 }

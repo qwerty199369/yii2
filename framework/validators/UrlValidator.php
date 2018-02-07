@@ -9,8 +9,6 @@ namespace yii\validators;
 
 use Yii;
 use yii\base\InvalidConfigException;
-use yii\helpers\Json;
-use yii\web\JsExpression;
 
 /**
  * UrlValidator validates that the attribute value is a valid http or https URL.
@@ -50,7 +48,7 @@ class UrlValidator extends Validator
 
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function init()
     {
@@ -64,7 +62,7 @@ class UrlValidator extends Validator
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function validateAttribute($model, $attribute)
     {
@@ -78,7 +76,7 @@ class UrlValidator extends Validator
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     protected function validateValue($value)
     {
@@ -96,7 +94,7 @@ class UrlValidator extends Validator
 
             if ($this->enableIDN) {
                 $value = preg_replace_callback('/:\/\/([^\/]+)/', function ($matches) {
-                    return '://' . idn_to_ascii($matches[1]);
+                    return '://' . $this->idnToAscii($matches[1]);
                 }, $value);
             }
 
@@ -108,45 +106,13 @@ class UrlValidator extends Validator
         return [$this->message, []];
     }
 
-    /**
-     * @inheritdoc
-     */
-    public function clientValidateAttribute($model, $attribute, $view)
+    private function idnToAscii($idn)
     {
-        ValidationAsset::register($view);
-        if ($this->enableIDN) {
-            PunycodeAsset::register($view);
-        }
-        $options = $this->getClientOptions($model, $attribute);
-
-        return 'yii.validation.url(value, messages, ' . Json::htmlEncode($options) . ');';
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function getClientOptions($model, $attribute)
-    {
-        if (strpos($this->pattern, '{schemes}') !== false) {
-            $pattern = str_replace('{schemes}', '(' . implode('|', $this->validSchemes) . ')', $this->pattern);
-        } else {
-            $pattern = $this->pattern;
+        if (PHP_VERSION_ID < 50600) {
+            // TODO: drop old PHP versions support
+            return idn_to_ascii($idn);
         }
 
-        $options = [
-            'pattern' => new JsExpression($pattern),
-            'message' => $this->formatMessage($this->message, [
-                'attribute' => $model->getAttributeLabel($attribute),
-            ]),
-            'enableIDN' => (bool) $this->enableIDN,
-        ];
-        if ($this->skipOnEmpty) {
-            $options['skipOnEmpty'] = 1;
-        }
-        if ($this->defaultScheme !== null) {
-            $options['defaultScheme'] = $this->defaultScheme;
-        }
-
-        return $options;
+        return idn_to_ascii($idn, 0, INTL_IDNA_VARIANT_UTS46);
     }
 }

@@ -23,8 +23,14 @@
  * NOTE: this file must be saved in UTF-8 encoding.
  */
 return [
-    '(not set)' => '(nie je nastavené)',
+    '"{attribute}" does not support operator "{operator}".' => '"{attribute}" nepodporuje operátor "{operator}".',
+    'Condition for "{attribute}" should be either a value or valid operator specification.' => 'Podmienkou pre "{attribute}" by mala byť hodnota alebo platná špecifikácia operátora.',
+    'Operator "{operator}" must be used with a search attribute.' => 'Operátor "{operator}" musí byť použitý s atribútom vyhľadávania.',
+    'Operator "{operator}" requires multiple operands.' => 'Operátor "{operator}" vyžaduje viac operandov.',
+    'The format of {filter} is invalid.' => 'Format {filter} je neplatný.',
+    'Unknown filter attribute "{attribute}"' => 'Neznámy atribút filtra "{attribute}"',
     ' and ' => ' a ',
+    '(not set)' => '(nie je nastavené)',
     'An internal server error occurred.' => 'Vyskytla sa interná chyba servera.',
     'Are you sure you want to delete this item?' => 'Skutočne chcete odstrániť tento záznam?',
     'Delete' => 'Zmazať',
@@ -42,7 +48,6 @@ return [
     'Page not found.' => 'Stránka nebola nájdená.',
     'Please fix the following errors:' => 'Opravte prosím nasledujúce chyby:',
     'Please upload a file.' => 'Nahrajte prosím súbor.',
-    'Powered by {yii}' => 'Beží na {yii}',
     'Showing <b>{begin, number}-{end, number}</b> of <b>{totalCount, number}</b> {totalCount, plural, one{item} other{items}}.' => 'Zobrazujem <b>{begin, number}-{end, number}</b> z <b>{totalCount, number}</b> {totalCount, plural, one{záznam} other{záznamov}}.',
     'The combination {values} of {attributes} has already been taken.' => 'Kombinácia {values} pre {attributes} je už použitá.',
     'The file "{file}" is not an image.' => 'Súbor "{file}" nie je obrázok.',

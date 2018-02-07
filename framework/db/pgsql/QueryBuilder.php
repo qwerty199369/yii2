@@ -8,6 +8,7 @@
 namespace yii\db\pgsql;
 
 use yii\base\InvalidArgumentException;
+use yii\helpers\StringHelper;
 
 /**
  * QueryBuilder is the query builder for PostgreSQL databases.
@@ -239,7 +240,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function insert($table, $columns, &$params)
     {
@@ -247,7 +248,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function update($table, $columns, $condition, &$params)
     {
@@ -282,7 +283,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function batchInsert($table, $columns, $rows)
     {
@@ -308,7 +309,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
                     $value = $schema->quoteValue($value);
                 } elseif (is_float($value)) {
                     // ensure type cast always has . as decimal separator in all locales
-                    $value = str_replace(',', '.', (string) $value);
+                    $value = StringHelper::floatToString($value);
                 } elseif ($value === true) {
                     $value = 'TRUE';
                 } elseif ($value === false) {
